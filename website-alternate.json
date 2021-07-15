@@ -1,0 +1,71 @@
+[
+    {
+        "address": "",
+        "altitude": 31.00103187561035,
+        "id": 0,
+        "latitude": 47.5654511,
+        "longitude": -122.3708041,
+        "name": "a",
+        "neighbours": {
+            "d": "10",
+	        "e": "5",
+            "f": "10"
+        }
+    },
+    {
+        "address": "",
+        "altitude": 31.00103187561035,
+        "id": 1,
+        "latitude": 47.5654511,
+        "longitude": -122.3708041,
+        "name": "b",
+        "neighbours": {
+            "d": "5",
+	        "e": "10",
+            "f": "10"
+        }
+    },
+    {
+        "address": "",
+        "altitude": 31.00103187561035,
+        "id": 2,
+        "latitude": 47.5654511,
+        "longitude": -122.3708041,
+        "name": "c",
+        "neighbours": {
+            "d": "10",
+	        "e": "10",
+            "f": "5"
+        }
+    },
+    {
+        "address": "",
+        "altitude": 31.00103187561035,
+        "id": 3,
+        "latitude": 47.5654511,
+        "longitude": -122.3708041,
+        "name": "d",
+        "neighbours": {
+        }
+    },
+    {
+        "address": "",
+        "altitude": 31.00103187561035,
+        "id": 4,
+        "latitude": 47.5654511,
+        "longitude": -122.3708041,
+        "name": "e",
+        "neighbours": {
+        }
+    },
+    {
+        "address": "",
+        "altitude": 31.00103187561035,
+        "id": 5,
+        "latitude": 47.5654511,
+        "longitude": -122.3708041,
+        "name": "f",
+        "neighbours": {
+        }
+    }
+]
