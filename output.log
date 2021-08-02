@@ -1,0 +1,45 @@
+   Compiling route-builder v0.1.0 (/home/colin/cycling-seattle/route-builder)
+warning: unused import: `std::fmt::Display`
+  --> src/munkres.rs:14:5
+   |
+14 | use std::fmt::Display;
+   |     ^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` on by default
+
+warning: unused variable: `name`
+   --> src/main.rs:143:10
+    |
+143 |     for (name, node) in nodes {
+    |          ^^^^ help: if this is intentional, prefix it with an underscore: `_name`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: function is never used: `print_matrix`
+   --> src/munkres.rs:368:4
+    |
+368 | fn print_matrix(matrix : Matrix<usize>, keys : HashMap<usize, (String, usize)>, ) {
+    |    ^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` on by default
+
+warning: 3 warnings emitted
+
+    Finished dev [unoptimized + debuginfo] target(s) in 0.93s
+     Running `target/debug/route-builder`
+[2021-07-18T18:37:26Z INFO  route_builder] parsing: website.json...
+[2021-07-18T18:37:26Z DEBUG route_builder] translating JSON into node map ...
+[2021-07-18T18:37:26Z DEBUG route_builder] starting all-pairs-shortest-path ...
+[2021-07-18T18:37:26Z DEBUG route_builder] loading node map into matrix ...
+[2021-07-18T18:37:26Z INFO  route_builder] floyd-warshall -> 116.90µs
+[2021-07-18T18:37:26Z INFO  route_builder] found 6 odd nodes.
+[2021-07-18T18:37:26Z INFO  route_builder] solving for matching...
+[2021-07-18T18:37:26Z DEBUG route_builder::munkres] prime.
+[2021-07-18T18:37:26Z DEBUG route_builder::munkres] augment_path.
+[2021-07-18T18:37:26Z DEBUG route_builder::munkres] prime.
+[2021-07-18T18:37:26Z DEBUG route_builder::munkres] augment_path.
+[2021-07-18T18:37:26Z INFO  route_builder::munkres] solved!
+[2021-07-18T18:37:26Z INFO  route_builder::munkres] [32md[0m => [31mc[0m
+[2021-07-18T18:37:26Z INFO  route_builder::munkres] [32me[0m => [31mf[0m
+[2021-07-18T18:37:26Z INFO  route_builder::munkres] [32ma[0m => [31mb[0m
+[2021-07-18T18:37:26Z INFO  route_builder] munkres -> 240.50µs

@@ -12,8 +12,10 @@ const NODE_TYPES : usize = 3;
 
 use prettytable::{Table, Row, Cell};
 use std::fmt::Display;
+use ansi_term::Colour;
 use std::default::Default;
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 pub type Column<T> = Vec<T>;
 pub type Matrix<T> = Vec<Vec<T>>;
@@ -246,13 +248,32 @@ fn augment_weights(array : &mut Matrix<i32>,
     }
 }
 
+pub fn copy_matrix(array : & Matrix<i32>) -> Matrix<i32> {
+
+    let mut matrix = square(array.len());
+    for i in 1..matrix.len() {
+        for j in 1..matrix.len() {
+            matrix[i][j] = array[i][j];
+            //info!("{}.{} => {}", i, j, matrix[i][j]);
+        }
+    }
+
+    matrix
+}
+
 pub fn solve(array : Matrix<i32>, keys : HashMap<usize, (String, usize)>) {
 
+    debug!("printing input weight matrix (pre-processed)...");
+    print_raw_matrix(&array);
+
     let size = array.len();
+    let original = copy_matrix(&array);
     let mut state : State = State::new(array);
     // Keep previous state to ensure progress and help debuggability.
     let mut copy = State::new(square(size));
-    
+   
+    debug!("printing state.weights matrix (pre-processed)...");
+    print_raw_matrix(&state.array);
     // 1.
     for i in 1..size {
         let min = row_min(&state.array, i);
@@ -265,6 +286,8 @@ pub fn solve(array : Matrix<i32>, keys : HashMap<usize, (String, usize)>) {
         }
     }
     clear_covers(&mut state.row_cover, &mut state.column_cover);
+    debug!("printing state.weights matrix (post-processed)...");
+    print_raw_matrix(&state.array);
 
     // Decides whether the next iteration of the loop is to start at step #3 or step #4.
     let mut offset = false;
@@ -279,6 +302,8 @@ pub fn solve(array : Matrix<i32>, keys : HashMap<usize, (String, usize)>) {
                 }
             }
             if solved(&state.column_cover) {
+                info!("solved in stage 3 ...");
+                validate(&state.mask, &original, &keys);
                 print_matrix(state.mask, keys);
                 return
             }
@@ -303,6 +328,8 @@ pub fn solve(array : Matrix<i32>, keys : HashMap<usize, (String, usize)>) {
         }
 
         if solved(&state.column_cover) {
+            info!("solved in stage 6 ...");
+            validate(&state.mask, &original, &keys);
             print_matrix(state.mask, keys);
             return;
         }
@@ -312,6 +339,38 @@ pub fn solve(array : Matrix<i32>, keys : HashMap<usize, (String, usize)>) {
             return;
         }
     }
+
+}
+
+fn validate(mask : & Matrix<usize>, cost : & Matrix<i32>, keys : & HashMap<usize, (String, usize)>) {
+    let row_cover : Column<bool> = vec![false; mask.len()];
+    let column_cover : Column<bool> = vec![false; mask.len()];
+   
+    let mut nodes : HashSet<(usize, usize)> = HashSet::new();
+    for i in 1..mask.len() {
+        for j in 1..mask.len() {
+            if mask[i][j] == 1 {
+                if row_cover[i] || column_cover[j] {
+                    info!("found conflict @ ({},{}) ...", i, j);
+                } else {
+                    nodes.insert((usize::min(i, j), usize::max(i, j)));
+                }
+            }
+        }
+    }
+
+    print_raw_matrix(cost);
+
+    let mut total_cost = 0;
+    for node in nodes {
+        let (i, j) = node;
+        let (from_name, _) = keys.get(&i).unwrap();
+        let (to_name, _) = keys.get(&j).unwrap();
+        info!("{} => {} ({})", Colour::Green.paint(from_name), Colour::Red.paint(to_name), cost[i][j]);
+        total_cost = total_cost + cost[i][j];
+    }
+
+    info!("total cost = {}", total_cost);
 
 }
 
@@ -335,7 +394,28 @@ fn row_covered_count(row_cover : &mut Column<bool>) -> i32 {
     count
 }
 
-fn print_matrix<T: Display>(matrix : Matrix<T>, keys : HashMap<usize, (String, usize)>) {
+pub fn print_raw_matrix<T : Display> (matrix : & Matrix<T>) {
+    let mut table = Table::new();
+    let mut header : Vec<Cell> = vec![Cell::new(" ")];
+    let size = matrix.len();
+
+    for i in 1..size {
+        header.push(Cell::new(&i.to_string()));
+    }
+    table.add_row(Row::new(header));
+   
+    for i in 1..size {
+        let mut row : Vec<Cell> = Vec::new();
+        row.push(Cell::new(&format!("{}", &i.to_string())));
+        for j in 1..size {
+            row.push(Cell::new(&matrix[i][j].to_string()));
+        }
+        table.add_row(Row::new(row));
+    }
+    table.printstd();
+}
+
+fn print_matrix<T : Display> (matrix : Matrix<T>, keys : HashMap<usize, (String, usize)>, ) {
     let mut table = Table::new();
     
     let mut header : Vec<Cell> = vec![Cell::new(" "), Cell::new(" ")];
@@ -346,10 +426,9 @@ fn print_matrix<T: Display>(matrix : Matrix<T>, keys : HashMap<usize, (String, u
         header.push(Cell::new(&i.to_string()));
     }
     table.add_row(Row::new(header));
-    
+
     for i in 1..size {
         let mut row : Vec<Cell> = Vec::new();
-        //let (name, key) = keys.get(&i).unwrap();
         match keys.get(&i) {
             Some((name, _)) => {
                 row.push(Cell::new(&name).style_spec("bFr"));
@@ -360,11 +439,7 @@ fn print_matrix<T: Display>(matrix : Matrix<T>, keys : HashMap<usize, (String, u
         }
         row.push(Cell::new(&format!("{}", &i.to_string())));
         for j in 1..size {
-            let style : String = String::new();
-            if &matrix[i][j] == 1 {
-                style.push_str("bFg");
-            }
-            row.push(Cell::new(&matrix[i][j].to_string()).style_spec(&style));
+            row.push(Cell::new(&matrix[i][j].to_string()));
         }
         table.add_row(Row::new(row));
     }

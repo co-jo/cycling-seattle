@@ -3,6 +3,7 @@ use std::time::Instant;
 use std::collections::HashMap;
 
 use log::info;
+use log::debug;
 
 use serde::{Deserialize, Serialize};
 
@@ -36,7 +37,7 @@ struct Node {
     edges: HashMap<String, Edge>
 }
 
-fn build_map(intersections : & Vec<Intersection>) -> HashMap<String, Node> {
+fn build_map(intersections : & Vec<Intersection>) -> Vec<(usize, Node)> {
     let mut nodes: HashMap<String, Node> = HashMap::new();
 
     // Add all intersections first, then populate edges/streets.
@@ -65,27 +66,39 @@ fn build_map(intersections : & Vec<Intersection>) -> HashMap<String, Node> {
         }
     }
 
-    return nodes;
+    // Return sorted Vector.
+    let mut vector : Vec<(usize, Node)> = Vec::new();
+    for (name, node) in nodes {
+        vector.push((node.id, node));
+    }
+    vector.sort_by(|a, b| a.0.cmp(&b.0));
+    
+    return vector;
 }
 
-fn all_pairs_shortest_arr(array : &mut Matrix<i32>, map : & HashMap<String, Node>) {
+fn all_pairs_shortest_arr(array : &mut Matrix<i32>, intersections : & Vec<(usize, Node)>) {
 
-    let size = map.len();
+    let size = intersections.len() + 1;
     let mut ids : HashMap<String, i32> = HashMap::new();
-    for i in 1..size+1 {
+    for i in 1..size {
         array[i][i] = 0;
     }
 
-    let mut keys : Vec<String> = map.keys().map(|key| key.to_string()).collect();
+    let mut keys : Vec<String> = intersections
+        .iter()
+        .map(|(id, node)| node.name.to_string())
+        .collect();
     keys.sort();
 
+    // This block offsets (increases) the keys by 1, so 0 => 1.
     let mut count = 1;
     for key in keys {
         ids.insert(key.clone(), count);
         count = count + 1;
     }
     
-    for (_, from_node) in map {
+    debug!("loading node map into matrix ...");
+    for (_, from_node) in intersections {
         for (_, edge) in &from_node.edges {
             if !ids.contains_key(&edge.to) {
                 println!("id_not_contains {}", &edge.to);
@@ -99,6 +112,18 @@ fn all_pairs_shortest_arr(array : &mut Matrix<i32>, map : & HashMap<String, Node
         }
     }
 
+    for i in 1..size {
+        for j in 1..size {
+            // A zero value that is not a self reference.
+            if array[i][j] == 0 && i != j{
+                array[i][j] = MAX;
+            }
+        }
+    }
+
+    debug!("pre-all_pairs_shortest::print_raw_matrix ...");
+    munkres::print_raw_matrix(&array);
+
     for k in 1..size {
         for i in 1..size {
             for j in 1..size {
@@ -108,6 +133,9 @@ fn all_pairs_shortest_arr(array : &mut Matrix<i32>, map : & HashMap<String, Node
             }
         }
     }
+    
+    debug!("post-all_pairs_shortest::print_raw_matrix ...");
+    munkres::print_raw_matrix(&array);
 
 }
 
@@ -116,30 +144,27 @@ fn parse(filename : String) -> (Matrix<i32>, Matrix<i32>, HashMap<usize, (String
     let contents = fs::read_to_string(filename)
         .expect("Something went wrong reading the file");
     let intersections : Vec<Intersection> = serde_json::from_str(&contents).unwrap();
+    debug!("translating JSON into node map ...");
     let nodes = build_map(&intersections);
     let nodes_len = nodes.len();
     
     let mut array : Matrix<i32> = munkres::square(nodes_len+1);
 
     let before = Instant::now();
+    debug!("starting all-pairs-shortest-path ...");
     all_pairs_shortest_arr(&mut array, &nodes);
     info!("floyd-warshall -> {:.2?}", before.elapsed());
 
     let mut odd_ids : HashMap<usize, (String, usize)> = HashMap::new();
     
-    //nodes.into_iter()
-    //    .filter(|(_, node)| node.edges.len() % 2 == 1)
-    //    .map(|(_, node)| (node.id, (node.name, 0)))
-    //    .collect();
-       
     // Translate the index into the array ('array') containing all nodes to
     // the position of the node in the odd array.
     let mut map : Vec<usize> = vec![0; nodes_len+1];
     let mut pos = 1;
-    for (name, node) in nodes {
+    for (_, node) in nodes.iter() {
         if node.edges.len() % 2 == 1 {
-            map[pos] = node.id;
-            odd_ids.insert(pos, (node.name, node.id));
+            map[pos] = node.id + 1;
+            odd_ids.insert(pos, (node.name.clone(), node.id));
             pos = pos + 1;
         }
     }
@@ -150,16 +175,16 @@ fn parse(filename : String) -> (Matrix<i32>, Matrix<i32>, HashMap<usize, (String
     info!("found {} odd nodes.", odd_len);
     // Add one in the appropriate places to ensure the 'odd' array effectively
     // stars at index 1 instead of 0.
-    for i in 1..odd_len+1 {
-        for j in 1..odd_len+1 {
+    for i in 1..pos {
+        for j in 1..pos {
             odd[i][j] = array[map[i]][map[j]];
         }
-        for j in 1..odd_len {
+        for j in 1..pos {
             odd[j][i] = array[map[j]][map[i]];
         }
     }
 
-    for i in 1..odd_len+1 {
+    for i in 1..pos {
         odd[i][i] = MAX;
     }
 
@@ -172,11 +197,11 @@ fn main() {
 
     // Deserialize JSON into data structures.
    
-    let file = "website.json";
+    let file = "website-alternate.json";
     info!("parsing: {}...", file);
     
     let (_, odd, ids) = parse(file.to_string());
-
+    munkres::print_raw_matrix(&odd);
     let before = Instant::now();
     info!("solving for matching...");
     munkres::solve(odd, ids);
